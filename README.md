@@ -23,7 +23,7 @@ compile project(':shadercam')
 ```
 or
 ```
-compile 'com.androidexperiments:shadercam:1.0.0'
+compile 'com.androidexperiments:shadercam:1.0.1'
 ```
 
 **shadercam** comes with a simple implementation of the camera2 apis called `CameraFragment`, which only
