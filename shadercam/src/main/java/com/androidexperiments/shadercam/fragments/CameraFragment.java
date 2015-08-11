@@ -212,7 +212,15 @@ public class CameraFragment extends Fragment {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
-            String cameraId = manager.getCameraIdList()[mCameraToUse];
+
+            String[] cameraList = manager.getCameraIdList();
+
+            //make sure we dont get array out of bounds error, default to primary [0] if thats the case
+            if(mCameraToUse >= cameraList.length)
+                mCameraToUse = CAMERA_PRIMARY;
+
+            String cameraId = cameraList[mCameraToUse];
+
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
             StreamConfigurationMap streamConfigurationMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
