@@ -587,6 +587,8 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
         synchronized (this) {
             if (mIsRecording)
                 stopRecording();
+            else //not recording but still needs release
+                mMediaRecorder.release();
         }
 
         //kill ouy thread
@@ -865,6 +867,8 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
                 return;
 
             mMediaRecorder.stop();
+            mMediaRecorder.release();
+
             mIsRecording = false;
 
             try {
