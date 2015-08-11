@@ -10,7 +10,7 @@ Check out [`shadercam-example`](https://github.com/googlecreativelab/shadercam/t
 
 Also, **shadercam** was built for usage with a couple Android Experiments:
 
-* [LipFlip](https://github.com/googlecreativelab/lipflip)
+* [Lip Swap](https://github.com/googlecreativelab/lipswap)
 * [Tunnel Vision](https://github.com/googlecreativelab/tunnelvision)
 
 usage
