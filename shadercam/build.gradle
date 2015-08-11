@@ -6,7 +6,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
 
 //for bintray and maven local
-version "1.0.1"
+version "1.0.2"
 
 android {
     compileSdkVersion 22
