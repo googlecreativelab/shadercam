@@ -639,10 +639,13 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
                     // Draw for recording, swap.
                     mRecordSurface.makeCurrent();
 
+                    setViewport(mRecordSurface.getWidth(), mRecordSurface.getHeight());
                     draw();
 
                     mRecordSurface.setPresentationTime(surfaceTexture.getTimestamp());
                     mRecordSurface.swapBuffers();
+
+                    setViewport(mWindowSurface.getWidth(), mWindowSurface.getHeight());
                 }
 
                 mWindowSurface.makeCurrent();
