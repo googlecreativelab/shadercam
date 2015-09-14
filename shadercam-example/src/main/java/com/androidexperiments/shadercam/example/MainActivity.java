@@ -1,10 +1,11 @@
 package com.androidexperiments.shadercam.example;
 
-import android.app.Activity;
-import android.app.FragmentTransaction;
+import android.Manifest;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.TextureView;
@@ -14,6 +15,7 @@ import android.widget.Toast;
 
 import com.androidexperiments.shadercam.example.gl.ExampleRenderer;
 import com.androidexperiments.shadercam.fragments.CameraFragment;
+import com.androidexperiments.shadercam.fragments.PermissionsHelper;
 import com.androidexperiments.shadercam.gl.CameraRenderer;
 import com.androidexperiments.shadercam.utils.ShaderUtils;
 import com.google.labs.androidexperiments.shadercamera.example.R;
@@ -29,7 +31,7 @@ import butterknife.OnClick;
  *
  * Very basic implemention of shader camera.
  */
-public class MainActivity extends Activity implements CameraRenderer.OnRendererReadyListener
+public class MainActivity extends FragmentActivity implements CameraRenderer.OnRendererReadyListener, PermissionsHelper.PermissionsListener
 {
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final String TAG_CAMERA_FRAGMENT = "tag_camera_frag";
@@ -61,6 +63,9 @@ public class MainActivity extends Activity implements CameraRenderer.OnRendererR
      */
     private boolean mRestartCamera = false;
 
+    private PermissionsHelper mPermissionsHelper;
+    private boolean mPermissionsSatisfied = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -69,21 +74,36 @@ public class MainActivity extends Activity implements CameraRenderer.OnRendererR
 
         ButterKnife.inject(this);
 
-        setCameraFragment();
+        setupCameraFragment();
         setupInteraction();
+
+        //setup permissions for M or start normally
+        if(PermissionsHelper.isMorHigher())
+            setupPermissions();
+    }
+
+    private void setupPermissions() {
+        mPermissionsHelper = PermissionsHelper.attach(this);
+        mPermissionsHelper.setRequestedPermissions(
+                new String[]{
+                        Manifest.permission.CAMERA,
+                        Manifest.permission.RECORD_AUDIO,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                }
+        );
     }
 
     /**
      * create the camera fragment responsible for handling camera state and add it to our activity
      */
-    private void setCameraFragment()
+    private void setupCameraFragment()
     {
         mCameraFragment = CameraFragment.getInstance();
         mCameraFragment.setCameraToUse(CameraFragment.CAMERA_PRIMARY); //pick which camera u want to use, we default to forward
         mCameraFragment.setTextureView(mTextureView);
 
         //add fragment to our setup and let it work its magic
-        FragmentTransaction transaction = getFragmentManager().beginTransaction();
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.add(mCameraFragment, TAG_CAMERA_FRAGMENT);
         transaction.commit();
     }
@@ -102,12 +122,49 @@ public class MainActivity extends Activity implements CameraRenderer.OnRendererR
         });
     }
 
+    /**
+     * Things are good to go and we can continue on as normal. If this is called after a user
+     * sees a dialog, then onResume will be called next, allowing the app to continue as normal.
+     */
     @Override
-    protected void onResume()
-    {
+    public void onPermissionsSatisfied() {
+        Log.d(TAG, "onPermissionsSatisfied()");
+        mPermissionsSatisfied = true;
+    }
+
+    /**
+     * User did not grant the permissions needed for out app, so we show a quick toast and kill the
+     * activity before it can continue onward.
+     * @param code
+     */
+    @Override
+    public void onPermissionsFailed(int code) {
+        Log.e(TAG, "onPermissionsFailed()" + code);
+        mPermissionsSatisfied = false;
+        Toast.makeText(this, "shadercam needs all permissions to function, please try again.", Toast.LENGTH_LONG).show();
+        this.finish();
+    }
+
+    @Override
+    protected void onResume() {
         super.onResume();
 
+        Log.d(TAG, "onResume()");
+
         ShaderUtils.goFullscreen(this.getWindow());
+
+        /**
+         * if we're on M and not satisfied, check for permissions needed
+         * {@link PermissionsHelper#checkPermissions()} will also instantly return true if we've
+         * checked prior and we have all the correct permissions, allowing us to continue, but if its
+         * false, we want to {@code return} here so that the popup will trigger without {@link #setReady(SurfaceTexture, int, int)}
+         * being called prematurely
+         */
+        //
+        if(PermissionsHelper.isMorHigher() && !mPermissionsSatisfied) {
+            if(!mPermissionsHelper.checkPermissions())
+                return;
+        }
 
         if(!mTextureView.isAvailable())
             mTextureView.setSurfaceTextureListener(mTextureListener); //set listener to handle when its ready
@@ -116,12 +173,10 @@ public class MainActivity extends Activity implements CameraRenderer.OnRendererR
     }
 
     @Override
-    protected void onPause()
-    {
+    protected void onPause() {
         super.onPause();
 
         shutdownCamera(false);
-
         mTextureView.setSurfaceTextureListener(null);
     }
 
@@ -188,6 +243,8 @@ public class MainActivity extends Activity implements CameraRenderer.OnRendererR
      */
     private void shutdownCamera(boolean restart)
     {
+        if(mCameraFragment == null || !mPermissionsSatisfied) return;
+
         mCameraFragment.closeCamera();
 
         mRestartCamera = restart;
