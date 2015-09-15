@@ -18,7 +18,6 @@ import com.androidexperiments.shadercam.fragments.CameraFragment;
 import com.androidexperiments.shadercam.fragments.PermissionsHelper;
 import com.androidexperiments.shadercam.gl.CameraRenderer;
 import com.androidexperiments.shadercam.utils.ShaderUtils;
-import com.google.labs.androidexperiments.shadercamera.example.R;
 
 import java.io.File;
 import java.util.Arrays;

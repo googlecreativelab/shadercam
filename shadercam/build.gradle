@@ -91,8 +91,7 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 }
 
 artifacts {
-    archives javadocJar
-    archives sourcesJar
+    archives javadocJar, sourcesJar
 }
 
 // below is the basic code used to upload this library to bintray where its synced with jcenter
