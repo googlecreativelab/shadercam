@@ -13,6 +13,17 @@ Also, **shadercam** was built for usage with a couple Android Experiments:
 * [Lip Swap](https://github.com/googlecreativelab/lipswap)
 * [Tunnel Vision](https://github.com/googlecreativelab/tunnelvision)
 
+permissions
+-----------
+
+**updated 9/14/15**
+
+We've added a [`PermissionsHelper`](https://github.com/googlecreativelab/shadercam/blob/master/shadercam/src/main/java/com/androidexperiments/shadercam/fragments/PermissionsHelper.java) 
+fragment to make handling Android M's new permissions model a bit easier.
+
+Refer to the example applications [`MainActivity.java`](https://github.com/googlecreativelab/shadercam/blob/master/shadercam-example/src/main/java/com/androidexperiments/shadercam/example/MainActivity.java#L82)
+for implementation specifics. 
+
 usage
 -----
 
@@ -23,7 +34,7 @@ compile project(':shadercam')
 ```
 or
 ```
-compile 'com.androidexperiments:shadercam:1.0.2'
+compile 'com.androidexperiments:shadercam:1.1.0'
 ```
 
 **shadercam** comes with a simple implementation of the camera2 apis called `CameraFragment`, which only
