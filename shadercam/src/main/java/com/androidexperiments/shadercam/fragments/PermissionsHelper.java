@@ -1,6 +1,7 @@
 package com.androidexperiments.shadercam.fragments;
 
 import android.content.pm.PackageManager;
+import android.content.pm.PermissionInfo;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
@@ -8,6 +9,7 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.util.Log;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -40,7 +42,7 @@ public class PermissionsHelper extends Fragment {
      * Set the permissions to be checked during  {@link #checkPermissions()}
      * @param permissions
      */
-    public void setRequestedPermissions(String[] permissions) {
+    public void setRequestedPermissions(String... permissions) {
         mPermissions = permissions;
     }
 
@@ -69,11 +71,24 @@ public class PermissionsHelper extends Fragment {
                 getParent().onPermissionsSatisfied();
             }
             else {
-                getParent().onPermissionsFailed(grantResults[0]);
+                getParent().onPermissionsFailed(getFailedPermissions(permissions, grantResults));
             }
         }
         else
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
+    private String[] getFailedPermissions(String[] permissions, int[] grantResults) {
+        ArrayList<String> failedPermissions = new ArrayList<>();
+        for(int i = 0; i < grantResults.length; i++) {
+            int result = grantResults[i];
+            if(result == PackageManager.PERMISSION_DENIED) {
+                failedPermissions.add(permissions[i]);
+            }
+        }
+        String[] failed = new String[failedPermissions.size()];
+        failed = failedPermissions.toArray(failed);
+        return failed;
     }
 
     /**
@@ -81,7 +96,7 @@ public class PermissionsHelper extends Fragment {
      */
     public interface PermissionsListener {
         void onPermissionsSatisfied();
-        void onPermissionsFailed(int code);
+        void onPermissionsFailed(String[] failedPermissions);
     }
 
     public static boolean isMorHigher(){

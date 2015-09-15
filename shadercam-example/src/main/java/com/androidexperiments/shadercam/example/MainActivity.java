@@ -21,6 +21,7 @@ import com.androidexperiments.shadercam.utils.ShaderUtils;
 import com.google.labs.androidexperiments.shadercamera.example.R;
 
 import java.io.File;
+import java.util.Arrays;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
@@ -85,11 +86,10 @@ public class MainActivity extends FragmentActivity implements CameraRenderer.OnR
     private void setupPermissions() {
         mPermissionsHelper = PermissionsHelper.attach(this);
         mPermissionsHelper.setRequestedPermissions(
-                new String[]{
-                        Manifest.permission.CAMERA,
-                        Manifest.permission.RECORD_AUDIO,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                }
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+
         );
     }
 
@@ -135,11 +135,11 @@ public class MainActivity extends FragmentActivity implements CameraRenderer.OnR
     /**
      * User did not grant the permissions needed for out app, so we show a quick toast and kill the
      * activity before it can continue onward.
-     * @param code
+     * @param failedPermissions string array of which permissions were denied
      */
     @Override
-    public void onPermissionsFailed(int code) {
-        Log.e(TAG, "onPermissionsFailed()" + code);
+    public void onPermissionsFailed(String[] failedPermissions) {
+        Log.e(TAG, "onPermissionsFailed()" + Arrays.toString(failedPermissions));
         mPermissionsSatisfied = false;
         Toast.makeText(this, "shadercam needs all permissions to function, please try again.", Toast.LENGTH_LONG).show();
         this.finish();
@@ -164,6 +164,8 @@ public class MainActivity extends FragmentActivity implements CameraRenderer.OnR
         if(PermissionsHelper.isMorHigher() && !mPermissionsSatisfied) {
             if(!mPermissionsHelper.checkPermissions())
                 return;
+            else
+                mPermissionsSatisfied = true; //extra helper as callback sometimes isnt quick enough for future results
         }
 
         if(!mTextureView.isAvailable())
@@ -243,7 +245,11 @@ public class MainActivity extends FragmentActivity implements CameraRenderer.OnR
      */
     private void shutdownCamera(boolean restart)
     {
-        if(mCameraFragment == null || !mPermissionsSatisfied) return;
+        //make sure we're here in a working state with proper permissions when we kill the camera
+        if(PermissionsHelper.isMorHigher() && !mPermissionsSatisfied) return;
+
+        //check to make sure we've even created the cam and renderer yet
+        if(mCameraFragment == null || mRenderer == null) return;
 
         mCameraFragment.closeCamera();
 
