@@ -4,14 +4,13 @@ import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.os.SystemClock;
-import android.util.Log;
 
 import com.androidexperiments.shadercam.gl.CameraRenderer;
 
 /**
- * Our super awesome shader. It calls its super constructor with the new new
- * glsl files we've created for this. Then it overrides the necessary methods to
- * add some interactivity.
+ * Our super awesome shader. It calls its super constructor with the new
+ * glsl files we've created for this. Then it overrides {@link #setUniformsAndAttribs()}
+ * to pass in our global time uniform
  */
 public class SuperAwesomeRenderer extends CameraRenderer {
     public SuperAwesomeRenderer(Context context, SurfaceTexture texture, int width, int height) {
@@ -24,7 +23,6 @@ public class SuperAwesomeRenderer extends CameraRenderer {
         super.setUniformsAndAttribs();
 
         int globalTimeHandle = GLES20.glGetUniformLocation(mCameraShaderProgram, "iGlobalTime");
-        float time = SystemClock.currentThreadTimeMillis() / 100.0f;
-        GLES20.glUniform1f(globalTimeHandle, time);
+        GLES20.glUniform1f(globalTimeHandle, SystemClock.currentThreadTimeMillis() / 100.0f);
     }
 }
