@@ -97,6 +97,9 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
      */
     private void setupCameraFragment()
     {
+        if(mCameraFragment != null && mCameraFragment.isAdded())
+            return;
+
         mCameraFragment = CameraFragment.getInstance();
         mCameraFragment.setCameraToUse(CameraFragment.CAMERA_PRIMARY); //pick which camera u want to use, we default to forward
         mCameraFragment.setTextureView(mTextureView);

@@ -13,6 +13,8 @@ import com.androidexperiments.shadercam.gl.CameraRenderer;
  * to pass in our global time uniform
  */
 public class SuperAwesomeRenderer extends CameraRenderer {
+    private float mTileAmount = 1.f;
+
     public SuperAwesomeRenderer(Context context, SurfaceTexture texture, int width, int height) {
         super(context, texture, width, height, "superawesome.frag.glsl", "superawesome.vert.glsl");
     }
@@ -24,5 +26,12 @@ public class SuperAwesomeRenderer extends CameraRenderer {
 
         int globalTimeHandle = GLES20.glGetUniformLocation(mCameraShaderProgram, "iGlobalTime");
         GLES20.glUniform1f(globalTimeHandle, SystemClock.currentThreadTimeMillis() / 100.0f);
+
+        int resolutionHandle = GLES20.glGetUniformLocation(mCameraShaderProgram, "iResolution");
+        GLES20.glUniform3f(resolutionHandle, mTileAmount, mTileAmount, 1.f);
+    }
+
+    public void setTileAmount(float tileAmount) {
+        this.mTileAmount = tileAmount;
     }
 }

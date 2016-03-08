@@ -15,7 +15,7 @@ varying vec2 v_TexCoordinate;
 uniform float	iGlobalTime;
 
 // play around with xy for different sized effect, or pass in via GLES20.glUniform3f();
-vec3 iResolution = vec3(1.,1.,1.);
+uniform vec3    iResolution;
 
 // simple helper method
 vec2 mirror(vec2 x)
@@ -27,7 +27,7 @@ void main ()
 {
     vec2 uv = -1.0 + 2.0 * v_CamTexCoordinate.xy / iResolution.xy;
 
-	float a = iGlobalTime * 0.2;
+	float a = iGlobalTime * 0.002;
 
 	for (float i = 1.0; i < 6.0; i += 1.0) {
 		uv = vec2(sin(a)*uv.y - cos(a)*uv.x, sin(a)*uv.x + cos(a)*uv.y);
