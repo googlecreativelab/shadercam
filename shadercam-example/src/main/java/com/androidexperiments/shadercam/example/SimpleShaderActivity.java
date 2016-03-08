@@ -31,9 +31,9 @@ import butterknife.OnClick;
  *
  * Very basic implemention of shader camera.
  */
-public class MainActivity extends FragmentActivity implements CameraRenderer.OnRendererReadyListener, PermissionsHelper.PermissionsListener
+public class SimpleShaderActivity extends FragmentActivity implements CameraRenderer.OnRendererReadyListener, PermissionsHelper.PermissionsListener
 {
-    private static final String TAG = MainActivity.class.getSimpleName();
+    private static final String TAG = SimpleShaderActivity.class.getSimpleName();
     private static final String TAG_CAMERA_FRAGMENT = "tag_camera_frag";
 
     /**
@@ -56,7 +56,7 @@ public class MainActivity extends FragmentActivity implements CameraRenderer.OnR
      * Our custom renderer for this example, which extends {@link CameraRenderer} and then adds custom
      * shaders, which turns shit green, which is easy.
      */
-    private ExampleRenderer mRenderer;
+    private CameraRenderer mRenderer;
 
     /**
      * boolean for triggering restart of camera after completed rendering
@@ -115,8 +115,11 @@ public class MainActivity extends FragmentActivity implements CameraRenderer.OnR
         mTextureView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                mRenderer.setTouchPoint(event.getRawX(), event.getRawY());
-                return true;
+                if(mRenderer instanceof ExampleRenderer) {
+                    ((ExampleRenderer) mRenderer).setTouchPoint(event.getRawX(), event.getRawY());
+                    return true;
+                }
+                return false;
             }
         });
     }
@@ -207,13 +210,22 @@ public class MainActivity extends FragmentActivity implements CameraRenderer.OnR
      * @param width width of the surface texture
      * @param height height of the surface texture
      */
-    private void setReady(SurfaceTexture surface, int width, int height) {
-        mRenderer = new ExampleRenderer(this, surface, mCameraFragment, width, height);
+    protected void setReady(SurfaceTexture surface, int width, int height) {
+        mRenderer = getRenderer(surface, width, height);
+        mRenderer.setCameraFragment(mCameraFragment);
         mRenderer.setOnRendererReadyListener(this);
         mRenderer.start();
 
         //initial config if needed
         mCameraFragment.configureTransform(width, height);
+    }
+
+    /**
+     * Override this method for easy usage of stock example setup, allowing for easy
+     * recording with any shader.
+     */
+    protected CameraRenderer getRenderer(SurfaceTexture surface, int width, int height) {
+        return new ExampleRenderer(this, surface, width, height);
     }
 
     private void startRecording()

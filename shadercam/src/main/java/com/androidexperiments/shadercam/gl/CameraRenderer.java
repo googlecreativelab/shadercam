@@ -252,12 +252,15 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
      */
     private File mOutputFile = null;
 
+    private String mFragmentShaderPath;
+    private String mVertexShaderPath;
+
     /**
      * Simple ctor to use default shaders
      */
-    public CameraRenderer(Context context, SurfaceTexture texture, CameraFragment cameraFragment, int width, int height)
+    public CameraRenderer(Context context, SurfaceTexture texture, int width, int height)
     {
-        init(context, texture, cameraFragment, width, height, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER);
+        init(context, texture, width, height, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER);
     }
 
     /**
@@ -266,35 +269,43 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
      * @param fragPath the file name of your fragment shader, ex: "lip_service.frag" if it is top-level /assets/ folder. Add subdirectories if needed
      * @param vertPath the file name of your vertex shader, ex: "lip_service.vert" if it is top-level /assets/ folder. Add subdirectories if needed
      */
-    public CameraRenderer(Context context, SurfaceTexture texture, CameraFragment cameraFragment, int width, int height, String fragPath, String vertPath)
+    public CameraRenderer(Context context, SurfaceTexture texture, int width, int height, String fragPath, String vertPath)
     {
-        init(context, texture, cameraFragment, width, height, fragPath, vertPath);
+        init(context, texture, width, height, fragPath, vertPath);
     }
 
-    private void init(Context context, SurfaceTexture texture, CameraFragment cameraFragment, int width, int height, String fragPath, String vertPath)
+    private void init(Context context, SurfaceTexture texture, int width, int height, String fragPath, String vertPath)
     {
         this.setName(THREAD_NAME);
 
         this.mContext = context;
         this.mSurfaceTexture = texture;
-        this.mCameraFragment = cameraFragment;
 
         this.mSurfaceWidth = width;
         this.mSurfaceHeight = height;
         this.mSurfaceAspectRatio = (float)width / height;
 
+        this.mFragmentShaderPath = fragPath;
+        this.mVertexShaderPath = vertPath;
+    }
+
+    private void initialize() {
         mTextureArray = new ArrayList<>();
 
         setupCameraFragment();
         setupMediaRecorder();
-        setViewport(width, height);
+        setViewport(mSurfaceWidth, mSurfaceHeight);
 
         if(fragmentShaderCode == null || vertexShaderCode == null) {
-            loadFromShadersFromAssets(fragPath, vertPath);
+            loadFromShadersFromAssets(mFragmentShaderPath, mVertexShaderPath);
         }
     }
 
     private void setupCameraFragment() {
+        if(mCameraFragment == null) {
+            throw new RuntimeException("CameraFragment is null! Please call setCameraFragment prior to initialization.");
+        }
+
         mCameraFragment.setOnViewportSizeUpdatedListener(new CameraFragment.OnViewportSizeUpdatedListener() {
             @Override
             public void onViewportSizeUpdated(int viewportWidth, int viewportHeight) {
@@ -548,6 +559,8 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
 
     @Override
     public synchronized void start() {
+        initialize();
+
         if(mOnRendererReadyListener == null)
             throw new RuntimeException("OnRenderReadyListener is not set! Set listener prior to calling start()");
 
@@ -905,6 +918,10 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
             if (outChannel != null)
                 outChannel.close();
         }
+    }
+
+    public void setCameraFragment(CameraFragment cameraFragment) {
+        mCameraFragment = cameraFragment;
     }
 
     /**

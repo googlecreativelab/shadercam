@@ -23,9 +23,9 @@ public class ExampleRenderer extends CameraRenderer
      * Base all shaders off those, since there are some default uniforms/textures that will
      * be passed every time for the camera coordinates and texture coordinates
      */
-    public ExampleRenderer(Context context, SurfaceTexture previewSurface, CameraFragment cameraFragment, int width, int height)
+    public ExampleRenderer(Context context, SurfaceTexture previewSurface, int width, int height)
     {
-        super(context, previewSurface, cameraFragment, width, height, "touchcolor.frag.glsl", "touchcolor.vert.glsl");
+        super(context, previewSurface, width, height, "touchcolor.frag.glsl", "touchcolor.vert.glsl");
 
         //other setup if need be done here
     }
