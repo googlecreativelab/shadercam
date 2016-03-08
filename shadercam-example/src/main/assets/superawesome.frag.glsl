@@ -8,12 +8,16 @@ varying vec2 v_CamTexCoordinate;
 varying vec2 v_TexCoordinate;
 //end necessary
 
+// Code taken from https://www.shadertoy.com/view/XsfGzj and modified to work in this context as an example
+// of how quickly and easily you can get up and running with shadercam
+
 // passed in via our SuperAwesomeRenderer.java
 uniform float	iGlobalTime;
 
-// play around with xy for different sized effect
-vec3	        iResolution = vec3(1.,1.,1.);
+// play around with xy for different sized effect, or pass in via GLES20.glUniform3f();
+vec3 iResolution = vec3(1.,1.,1.);
 
+// simple helper method
 vec2 mirror(vec2 x)
 {
 	return abs(fract(x/2.0) - 0.5)*2.0;
