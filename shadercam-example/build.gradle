@@ -21,11 +21,13 @@ android {
         abortOnError false
     }
 
+    dataBinding {
+        enabled = true
+    }
 }
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile project(':shadercam')
     compile 'com.android.support:appcompat-v7:27.0.2' //for theming
-    compile 'com.jakewharton:butterknife:8.7.0' //dependency injection
 }

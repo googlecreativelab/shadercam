@@ -13,14 +13,11 @@ import com.androidexperiments.shadercam.gl.CameraRenderer;
  */
 public class MeetupActivity extends SimpleShaderActivity implements SeekBar.OnSeekBarChangeListener {
     private SuperAwesomeRenderer mMyRenderer;
-    private SeekBar mSeekbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        mSeekbar = (SeekBar) findViewById(R.id.seek_bar);
-        mSeekbar.setOnSeekBarChangeListener(this);
+        mMainBinding.seekBar.setOnSeekBarChangeListener(this);
     }
 
     @Override
