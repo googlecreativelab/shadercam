@@ -9,12 +9,12 @@ apply plugin: 'com.android.library'
 version "1.2.0"
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion '23.0.2'
+    compileSdkVersion 27
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 23
+        targetSdkVersion 27
         versionCode 4
         versionName version
     }
@@ -28,7 +28,7 @@ android {
 
 dependencies {
     //for using fragmentactivity with permissions model
-    compile 'com.android.support:support-v4:23.2.0'
+    compile 'com.android.support:support-v4:27.0.2'
 }
 
 //def siteUrl = 'https://github.com/googlecreativelab/shadercam'      // Homepage URL of the library
