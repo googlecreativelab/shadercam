@@ -1,5 +1,6 @@
 package com.androidexperiments.shadercam.fragments;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -196,6 +197,7 @@ public class CameraFragment extends Fragment {
     /**
      * Tries to open a CameraDevice. The result is listened by `mStateCallback`.
      */
+    @SuppressLint("MissingPermission")
     public void openCamera()
     {
         final Activity activity = getActivity();
