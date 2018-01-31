@@ -28,7 +28,7 @@ android {
 
 dependencies {
     //for using fragmentactivity with permissions model
-    compile 'com.android.support:support-v4:27.0.2'
+    implementation 'com.android.support:support-v4:27.0.2'
 }
 
 //def siteUrl = 'https://github.com/googlecreativelab/shadercam'      // Homepage URL of the library

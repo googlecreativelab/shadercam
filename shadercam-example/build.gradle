@@ -27,7 +27,7 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile project(':shadercam')
-    compile 'com.android.support:appcompat-v7:27.0.2' //for theming
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation project(':shadercam')
+    implementation 'com.android.support:appcompat-v7:27.0.2' //for theming
 }
