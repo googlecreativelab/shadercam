@@ -1,6 +1,7 @@
 package com.androidexperiments.shadercam.example;
 
 import android.Manifest;
+import android.databinding.DataBindingUtil;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.os.Environment;
@@ -10,9 +11,9 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.TextureView;
 import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
+import com.androidexperiments.shadercam.example.databinding.MainBinding;
 import com.androidexperiments.shadercam.example.gl.ExampleRenderer;
 import com.androidexperiments.shadercam.fragments.CameraFragment;
 import com.androidexperiments.shadercam.fragments.PermissionsHelper;
@@ -21,10 +22,6 @@ import com.androidexperiments.shadercam.utils.ShaderUtils;
 
 import java.io.File;
 import java.util.Arrays;
-
-import butterknife.ButterKnife;
-import butterknife.InjectView;
-import butterknife.OnClick;
 
 /**
  * Written by Anthony Tripaldi
@@ -41,11 +38,7 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
      */
     private static final String TEST_VIDEO_FILE_NAME = "test_video.mp4";
 
-    /**
-     * We inject our views from our layout xml here using {@link ButterKnife}
-     */
-    @InjectView(R.id.texture_view) TextureView mTextureView;
-    @InjectView(R.id.btn_record) Button mRecordBtn;
+    protected MainBinding mMainBinding;
 
     /**
      * Custom fragment used for encapsulating all the {@link android.hardware.camera2} apis.
@@ -70,9 +63,7 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        ButterKnife.inject(this);
+        mMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
         setupCameraFragment();
         setupInteraction();
@@ -102,7 +93,7 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
 
         mCameraFragment = CameraFragment.getInstance();
         mCameraFragment.setCameraToUse(CameraFragment.CAMERA_PRIMARY); //pick which camera u want to use, we default to forward
-        mCameraFragment.setTextureView(mTextureView);
+        mCameraFragment.setTextureView(mMainBinding.textureView);
 
         //add fragment to our setup and let it work its magic
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
@@ -115,7 +106,7 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
      * use in our shader to control color channels.
      */
     private void setupInteraction() {
-        mTextureView.setOnTouchListener(new View.OnTouchListener() {
+        mMainBinding.textureView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 if(mRenderer instanceof ExampleRenderer) {
@@ -173,10 +164,10 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
                 mPermissionsSatisfied = true; //extra helper as callback sometimes isnt quick enough for future results
         }
 
-        if(!mTextureView.isAvailable())
-            mTextureView.setSurfaceTextureListener(mTextureListener); //set listener to handle when its ready
+        if(!mMainBinding.textureView.isAvailable())
+            mMainBinding.textureView.setSurfaceTextureListener(mTextureListener); //set listener to handle when its ready
         else
-            setReady(mTextureView.getSurfaceTexture(), mTextureView.getWidth(), mTextureView.getHeight());
+            setReady(mMainBinding.textureView.getSurfaceTexture(), mMainBinding.textureView.getWidth(), mMainBinding.textureView.getHeight());
     }
 
     @Override
@@ -184,15 +175,11 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
         super.onPause();
 
         shutdownCamera(false);
-        mTextureView.setSurfaceTextureListener(null);
+        mMainBinding.textureView.setSurfaceTextureListener(null);
     }
 
-    /**
-     * {@link ButterKnife} uses annotations to make setting {@link android.view.View.OnClickListener}'s
-     * easier than ever with the {@link OnClick} annotation.
-     */
-    @OnClick(R.id.btn_record)
-    public void onClickRecord()
+
+    public void onClickRecord(View v)
     {
         if(mRenderer.isRecording())
             stopRecording();
@@ -200,8 +187,7 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
             startRecording();
     }
 
-    @OnClick(R.id.btn_swap_camera)
-    public void onClickSwapCamera()
+    public void onClickSwapCamera(View v)
     {
         mCameraFragment.swapCamera();
     }
@@ -234,13 +220,13 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
     private void startRecording()
     {
         mRenderer.startRecording(getVideoFile());
-        mRecordBtn.setText("Stop");
+        mMainBinding.btnRecord.setText("Stop");
     }
 
     private void stopRecording()
     {
         mRenderer.stopRecording();
-        mRecordBtn.setText("Record");
+        mMainBinding.btnRecord.setText("Record");
 
         //restart so surface is recreated
         shutdownCamera(true);
@@ -298,7 +284,7 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
             @Override
             public void run() {
                 if (mRestartCamera) {
-                    setReady(mTextureView.getSurfaceTexture(), mTextureView.getWidth(), mTextureView.getHeight());
+                    setReady(mMainBinding.textureView.getSurfaceTexture(), mMainBinding.textureView.getWidth(), mMainBinding.textureView.getHeight());
                     mRestartCamera = false;
                 }
             }

@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion '23.0.2'
+    compileSdkVersion 27
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "com.androidexperiments.shadercam.example"
         minSdkVersion 21
-        targetSdkVersion 23
+        targetSdkVersion 27
         versionCode 3
         versionName "1.2"
     }
@@ -21,11 +21,13 @@ android {
         abortOnError false
     }
 
+    dataBinding {
+        enabled = true
+    }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile project(':shadercam')
-    compile 'com.android.support:appcompat-v7:23.2.0' //for theming
-    compile 'com.jakewharton:butterknife:6.1.0' //dependency injection
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation project(':shadercam')
+    implementation 'com.android.support:appcompat-v7:27.0.2' //for theming
 }

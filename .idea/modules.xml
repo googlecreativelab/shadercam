@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/ShaderCam.iml" filepath="$PROJECT_DIR$/ShaderCam.iml" />
-      <module fileurl="file://$PROJECT_DIR$/shadercam/shadercam.iml" filepath="$PROJECT_DIR$/shadercam/shadercam.iml" />
+      <module fileurl="file://$PROJECT_DIR$/shadercam.iml" filepath="$PROJECT_DIR$/shadercam.iml" />
       <module fileurl="file://$PROJECT_DIR$/shadercam-example/shadercam-example.iml" filepath="$PROJECT_DIR$/shadercam-example/shadercam-example.iml" />
+      <module fileurl="file://$PROJECT_DIR$/shadercam/shadercam-shadercam.iml" filepath="$PROJECT_DIR$/shadercam/shadercam-shadercam.iml" />
     </modules>
   </component>
 </project>

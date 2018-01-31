@@ -1,12 +1,12 @@
 package com.androidexperiments.shadercam.fragments;
 
 import android.content.pm.PackageManager;
-import android.content.pm.PermissionInfo;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -153,7 +153,7 @@ public class PermissionsHelper extends Fragment {
     public boolean hasSelfPermission(String[] permissions) {
         // Verify that all required permissions have been granted
         for (String permission : permissions) {
-            if (getActivity().checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(getActivity(), permission) != PackageManager.PERMISSION_GRANTED) {
                 return false;
             }
         }
@@ -167,7 +167,7 @@ public class PermissionsHelper extends Fragment {
     public boolean hasSelfPermission(String permission) {
         // Below Android M all permissions are granted at install time and are already available.
 
-        return getActivity().checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(getActivity(), permission) == PackageManager.PERMISSION_GRANTED;
     }
 
 }
