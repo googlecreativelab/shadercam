@@ -608,10 +608,12 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
         Looper.myLooper().quit();
     }
 
+    private int frameCount = 0;
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture)
     {
         boolean swapResult;
+        frameCount++;
 
         synchronized (this)
         {
@@ -697,8 +699,11 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
      */
     protected void updatePreviewTexture()
     {
-        mPreviewTexture.updateTexImage();
-        mPreviewTexture.getTransformMatrix(mCameraTransformMatrix);
+        while (frameCount > 0) {
+            mPreviewTexture.updateTexImage();
+            mPreviewTexture.getTransformMatrix(mCameraTransformMatrix);
+            frameCount--;
+        }
     }
 
     /**
