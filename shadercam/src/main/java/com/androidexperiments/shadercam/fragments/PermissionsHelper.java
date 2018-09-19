@@ -7,6 +7,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -61,6 +62,25 @@ public class PermissionsHelper extends Fragment {
 
         return false;
     }
+
+
+    public boolean checkAppCompatPermissions(AppCompatActivity activity) {
+        if(mPermissions == null)
+            throw new RuntimeException("String[] permissions is null, please call setRequestedPermissions!");
+
+        //if it has the permissions, don't wait for async callback and
+        //just return true so apps can continue as normal
+        if(hasSelfPermission(activity, mPermissions) && getParent() != null) {
+            getParent().onPermissionsSatisfied();
+            return true;
+        }
+        else {
+            activity.requestPermissions(mPermissions, PERMISSION_REQUEST_CODE);
+        }
+
+        return false;
+    }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -141,6 +161,16 @@ public class PermissionsHelper extends Fragment {
         // Verify that each required permission has been granted, otherwise return false.
         for (int result : grantResults) {
             if (result != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean hasSelfPermission(AppCompatActivity activity, String[] permissions) {
+        // Verify that all required permissions have been granted
+        for (String permission : permissions) {
+            if (activity.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
                 return false;
             }
         }

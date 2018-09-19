@@ -41,7 +41,7 @@ import java.util.ArrayList;
  *
  * TODO: add methods for users to create their own mediarecorders/change basic settings of default mr
  */
-
+@Deprecated
 public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvailableListener
 {
     private static final String TAG = CameraRenderer.class.getSimpleName();
@@ -608,10 +608,12 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
         Looper.myLooper().quit();
     }
 
+    private int frameCount = 0;
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture)
     {
         boolean swapResult;
+        frameCount++;
 
         synchronized (this)
         {
@@ -697,8 +699,11 @@ public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvai
      */
     protected void updatePreviewTexture()
     {
-        mPreviewTexture.updateTexImage();
-        mPreviewTexture.getTransformMatrix(mCameraTransformMatrix);
+        while (frameCount > 0) {
+            mPreviewTexture.updateTexImage();
+            mPreviewTexture.getTransformMatrix(mCameraTransformMatrix);
+            frameCount--;
+        }
     }
 
     /**
