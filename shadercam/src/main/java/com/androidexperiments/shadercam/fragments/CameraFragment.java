@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Fragment for operating the camera, it doesnt have any UI elements, just controllers
  */
+@Deprecated
 public class CameraFragment extends Fragment {
 
     private static final String TAG = "CameraFragment";

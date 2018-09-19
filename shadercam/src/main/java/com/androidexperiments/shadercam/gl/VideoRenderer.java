@@ -9,19 +9,14 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
-import android.media.MediaRecorder;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
-import android.os.Handler;
-import android.os.Message;
-import android.renderscript.Matrix4f;
 import android.util.Log;
 import android.util.SparseIntArray;
 import android.view.Surface;
 
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -33,18 +28,14 @@ import java.util.ArrayList;
  * recording video with built-in media recorder.
  *
  * Subclass this and add any kind of fun stuff u want, new shaders, textures, uniforms - go to town!
- *
- * TODO: add methods for users to create their own mediarecorders/change basic settings of default mr
  */
 
-public class VideoRenderer extends Thread implements RecordableSurfaceView.RendererCallbacks,
+public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
         SurfaceTexture.OnFrameAvailableListener {
 
     private static final String TAG = VideoRenderer.class.getSimpleName();
 
-    private static final String THREAD_NAME = "VideoRendererThread";
-    private int mvpMatrixHandle;
-    private Matrix4f mvpMatrix = new Matrix4f();
+    int mNeedsRefreshCount = 0;
 
     /**
      * if you create new files, just override these defaults in your subclass and
@@ -150,10 +141,10 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
 
     /**
      * matrix for transforming our camera texture, available immediately after {@link #}s
-     * {@code updateTexImage()} is called in our main {@link #draw()} loop.
+     * {@code updateTexImage()} is called in our main {@link #onDrawFrame()} loop.
      */
     private float[] mCameraTransformMatrix = new float[16];
-    private float[] mWindowTransformArray = new float[16];
+
     private Matrix mWindowTransform = new Matrix();
 
     public void setWindowTransform(Matrix windowTransform) {
@@ -178,14 +169,6 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
      */
     private VideoFragment mVideoFragment;
 
-
-    /**
-     * Height of our recorded video - notice that if we use {@link com.androidexperiments.shadercam.view.SquareTextureView} that
-     * we can pss in the same value as the width here to make sure we render out a square movie. Otherwise, it will stretch the square
-     * textureview preview into a fullsize video. Play with the numbers here and the size of the TextureView you use to see the different types
-     * of output depending on scale values
-     */
-    private static final int VIDEO_HEIGHT = 1280;
 
     /**
      * Array of ints for use with screen orientation hint in our MediaRecorder.
@@ -230,28 +213,6 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
 
     }
 
-    public void initialize() {
-//        mTextureArray = new ArrayList<>();
-//
-//        setupCameraFragment();
-
-    }
-
-    private void setupCameraFragment() {
-        if (mVideoFragment == null) {
-            throw new RuntimeException(
-                    "CameraFragment is null! Please call setCameraFragment prior to initialization.");
-        }
-
-        mVideoFragment.setOnViewportSizeUpdatedListener(
-                new VideoFragment.OnViewportSizeUpdatedListener() {
-                    @Override
-                    public void onViewportSizeUpdated(int viewportWidth, int viewportHeight) {
-                        mViewportWidth = viewportWidth;
-                        mViewportHeight = viewportHeight;
-                    }
-                });
-    }
 
     private void loadFromShadersFromAssets(String pathToFragment, String pathToVertex) {
         try {
@@ -392,16 +353,6 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
         }
 
     }
-//
-//    @Override
-//    public synchronized void start() {
-//        initialize();
-//
-//        if(mOnRendererReadyListener == null)
-//            throw new RuntimeException("OnRenderReadyListener is not set! Set listener prior to calling start()");
-//
-//        super.start();
-//    }
 
 
     /**
@@ -420,7 +371,6 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
      */
     protected void setUniformsAndAttribs() {
         int textureParamHandle = GLES20.glGetUniformLocation(mCameraShaderProgram, "camTexture");
-        mvpMatrixHandle = GLES20.glGetUniformLocation(mCameraShaderProgram, "mvpMatrix");
 
         int textureTranformHandle = GLES20
                 .glGetUniformLocation(mCameraShaderProgram, "camTextureTransform");
@@ -573,6 +523,8 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
         mSurfaceWidth = width;
         mViewportHeight = height;
         mViewportWidth = width;
+        initGLComponents();
+
     }
 
     @Override
@@ -582,7 +534,6 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
 
     @Override
     public void onContextCreated() {
-        initGLComponents();
     }
 
     private boolean mFrameAvailableRegistered = false;
@@ -590,14 +541,10 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
     @Override
     public void onPreDrawFrame() {
         if (mSurfaceTexture != null) {
-//            mSurfaceTexture.updateTexImage();
-//            mSurfaceTexture.getTransformMatrix(mCameraTransformMatrix);
             if (!mFrameAvailableRegistered) {
-
                 mSurfaceTexture.setOnFrameAvailableListener(this);
                 mFrameAvailableRegistered = true;
             }
-
         } else {
             if (mVideoFragment.getSurfaceTexture() != null) {
                 mSurfaceTexture = mVideoFragment.getSurfaceTexture();
@@ -607,8 +554,8 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
 
     @Override
     public void onDrawFrame() {
-        if (needsRefreshCount > 0) {
-            for (int i = 0; i < needsRefreshCount; i++) {
+        if (mNeedsRefreshCount > 0) {
+            for (int i = 0; i < mNeedsRefreshCount; i++) {
                 mSurfaceTexture.updateTexImage();
                 mSurfaceTexture.getTransformMatrix(mCameraTransformMatrix);
             }
@@ -635,11 +582,10 @@ public class VideoRenderer extends Thread implements RecordableSurfaceView.Rende
 
     }
 
-    int needsRefreshCount = 0;
 
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture) {
-        needsRefreshCount++;
+        mNeedsRefreshCount++;
         if (mSurfaceTexture != null) {
         } else {
             if (mVideoFragment.getSurfaceTexture() != null) {

@@ -403,13 +403,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
                     Log.i(TAG, "---no perfect match, check for 'normal'");
                 }
 
-                //if that fails - check for largest 'normal size' video
-//                for (Size potential : potentials) {
-//                    if (potential.getHeight() == 1080 || potential.getHeight() == 720) {
-//                        sizeToReturn = potential;
-//                        break;
-//                    }
-//                }
                 if (sizeToReturn == null) {
                     Log.i(TAG, "---no 'normal' match, return largest ");
                 }
@@ -467,10 +460,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
             }
 
             assert mPreviewTexture != -1;
-//            if (mSurfaceTexture != null) {
-//                mSurfaceTexture.release();
-//                mSurfaceTexture = null;
-//            }
 
             mSurfaceTexture = new SurfaceTexture(mPreviewTexture);
             mVideoRenderer.setSurfaceTexture(mSurfaceTexture);

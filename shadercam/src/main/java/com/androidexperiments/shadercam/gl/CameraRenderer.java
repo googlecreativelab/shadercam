@@ -41,7 +41,7 @@ import java.util.ArrayList;
  *
  * TODO: add methods for users to create their own mediarecorders/change basic settings of default mr
  */
-
+@Deprecated
 public class CameraRenderer extends Thread implements SurfaceTexture.OnFrameAvailableListener
 {
     private static final String TAG = CameraRenderer.class.getSimpleName();

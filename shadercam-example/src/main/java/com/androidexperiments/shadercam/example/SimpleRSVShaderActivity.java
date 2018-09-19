@@ -36,8 +36,7 @@ import butterknife.OnClick;
  *
  * Very basic implemention of shader camera.
  */
-public class SimpleRSVShaderActivity extends FragmentActivity
-        implements PermissionsHelper.PermissionsListener {
+public class SimpleRSVShaderActivity extends FragmentActivity implements PermissionsHelper.PermissionsListener {
 
     private static final String TAG = SimpleRSVShaderActivity.class.getSimpleName();
 
