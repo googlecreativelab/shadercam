@@ -7,7 +7,6 @@ import com.uncorkedstudios.android.view.recordablesurfaceview.RecordableSurfaceV
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
@@ -41,9 +40,9 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
      * if you create new files, just override these defaults in your subclass and
      * don't edit the {@link #vertexShaderCode} and {@link #fragmentShaderCode} variables
      */
-    private String DEFAULT_FRAGMENT_SHADER = "camera.frag.glsl";
+    private String DEFAULT_FRAGMENT_SHADER = "vid.frag.glsl";
 
-    private String DEFAULT_VERTEX_SHADER = "camera.vert.glsl";
+    private String DEFAULT_VERTEX_SHADER = "vid.vert.glsl";
 
     /**
      * Current context for use with utility methods
@@ -145,12 +144,6 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
      */
     private float[] mCameraTransformMatrix = new float[16];
 
-    private Matrix mWindowTransform = new Matrix();
-
-    public void setWindowTransform(Matrix windowTransform) {
-        mWindowTransform = windowTransform;
-        mWindowTransform.getValues(mCameraTransformMatrix);
-    }
 
     /**
      * Interface listener for some callbacks to the UI thread when rendering is setup and finished.
@@ -232,7 +225,6 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
         setupTextures();
         setupCameraTexture();
         setupShaders();
-
         onSetupComplete();
     }
 
@@ -390,6 +382,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
         GLES20.glEnableVertexAttribArray(textureCoordinateHandle);
         GLES20.glVertexAttribPointer(textureCoordinateHandle, 2, GLES20.GL_FLOAT, false, 4 * 2,
                 textureBuffer);
+
         GLES20.glUniformMatrix4fv(textureTranformHandle, 1, false, mCameraTransformMatrix, 0);
     }
 
@@ -571,6 +564,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
         GLES20.glUseProgram(mCameraShaderProgram);
 
         setUniformsAndAttribs();
+
         setExtraTextures();
         drawElements();
         onDrawCleanup();

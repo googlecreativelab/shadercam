@@ -88,6 +88,7 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
         ButterKnife.bind(this);
         setupVideoFragment();
         setupInteraction();
+        mVideoRenderer = new VideoRenderer(this);
 
         //setup permissions for M or start normally
         if (PermissionsHelper.isMorHigher()) {
@@ -107,14 +108,13 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
 
         mVideoFragment = VideoFragment.getInstance();
         mVideoFragment.setCameraToUse(
-                CameraFragment.CAMERA_PRIMARY); //pick which camera u want to use, we default to forward
+                VideoFragment.CAMERA_PRIMARY); //pick which camera u want to use, we default to forward
 
         //add fragment to our setup and let it work its magic
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.add(mVideoFragment, TAG_CAMERA_FRAGMENT);
         transaction.commit();
         mVideoFragment.setRecordableSurfaceView(mRecordableSurfaceView);
-        mRecordableSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
     }
 
@@ -155,15 +155,6 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
     public void onPermissionsSatisfied() {
         Log.d(TAG, "onPermissionsSatisfied()");
         mPermissionsSatisfied = true;
-        mRecordableSurfaceView.resume();
-        try {
-            mOutputFile = getVideoFile();
-            android.graphics.Point size = new android.graphics.Point();
-            getWindowManager().getDefaultDisplay().getRealSize(size);
-            mRecordableSurfaceView.initRecorder(mOutputFile, size.x, size.y, null, null);
-        } catch (IOException ioex) {
-            Log.e(TAG, "Couldn't re-init recording", ioex);
-        }
     }
 
     /**
@@ -196,11 +187,12 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
          * false, we want to {@code return} here so that the popup will trigger without {@link #setReady(SurfaceTexture, int, int)}
          * being called prematurely
          */
-        //
+
         if (PermissionsHelper.isMorHigher() && !mPermissionsSatisfied) {
             if (!mPermissionsHelper.checkPermissions()) {
                 return;
             } else {
+                mRecordableSurfaceView.resume();
                 mPermissionsSatisfied
                         = true; //extra helper as callback sometimes isnt quick enough for future results
                 mOutputFile = getVideoFile();
@@ -286,49 +278,10 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
             return;
         }
 
-        //check to make sure we've even created the cam and renderer yet
-//        if (mVideoFragment == null || mRenderer == null) {
-//            return;
-//        }
 
         mVideoFragment.closeCamera();
 
         mRestartCamera = restart;
-//        mRenderer = null;
     }
-
-//    /**
-//     * Interface overrides from our {@link com.androidexperiments.shadercam.gl.VideoRenderer.OnRendererReadyListener}
-//     * interface. Since these are being called from inside the CameraRenderer thread, we need to make sure
-//     * that we call our methods from the {@link #runOnUiThread(Runnable)} method, so that we don't
-//     * throw any exceptions about touching the UI from non-UI threads.
-//     *
-//     * Another way to handle this would be to create a Handler/Message system similar to how our
-//     * {@link com.androidexperiments.shadercam.gl.VideoRenderer.RenderHandler} works.
-//     */
-//    @Override
-//    public void onRendererReady() {
-//        runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                mVideoFragment.setPreviewTexture(mRenderer.getCameraTexture());
-//                mVideoFragment.openCamera();
-//            }
-//        });
-//    }
-//
-//    @Override
-//    public void onRendererFinished() {
-//        runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                if (mRestartCamera) {
-//
-//                    mRestartCamera = false;
-//                }
-//            }
-//        });
-//    }
-
 
 }

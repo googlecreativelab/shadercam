@@ -3,6 +3,8 @@ attribute vec4 position;
 
 //camera transform and texture
 uniform mat4 camTextureTransform;
+uniform mat4 uMVPMatrix;
+
 attribute vec4 camTexCoordinate;
 
 //tex coords
@@ -12,5 +14,5 @@ void main()
 {
     //camera texcoord needs to be manipulated by the transform given back from the system
     v_CamTexCoordinate = (camTextureTransform * camTexCoordinate).xy;
-    gl_Position = position;
+    gl_Position =  position;
 }

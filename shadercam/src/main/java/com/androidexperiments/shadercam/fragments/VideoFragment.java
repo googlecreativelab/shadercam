@@ -8,8 +8,6 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.Matrix;
-import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -21,6 +19,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.MediaRecorder;
+import android.opengl.Matrix;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -34,6 +33,8 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -242,16 +243,15 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
             StreamConfigurationMap streamConfigurationMap = characteristics
                     .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-            //typically these are identical
-            mVideoSize = chooseVideoSize(
-                    streamConfigurationMap.getOutputSizes(MediaRecorder.class));
-            mPreviewSize = chooseVideoSize(
-                    streamConfigurationMap.getOutputSizes(SurfaceTexture.class));
+            mVideoSize = getOptimalPreviewSize(
+                    streamConfigurationMap.getOutputSizes(MediaRecorder.class),
+                    mRecordableSurfaceView.getWidth(), mRecordableSurfaceView.getHeight());
+            mPreviewSize = getOptimalPreviewSize(
+                    streamConfigurationMap.getOutputSizes(SurfaceTexture.class),
+                    mRecordableSurfaceView.getWidth(), mRecordableSurfaceView.getHeight());
 
             //send back for updates to renderer if needed
             updateViewportSize(mVideoSizeAspectRatio, mPreviewSurfaceAspectRatio);
-
-            Log.i(TAG, "openCamera() videoSize: " + mVideoSize + " previewSize: " + mPreviewSize);
 
             manager.openCamera(cameraId, mStateCallback, null);
         } catch (CameraAccessException e) {
@@ -297,6 +297,7 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
         if (mOnViewportSizeUpdatedListener != null) {
             mOnViewportSizeUpdatedListener.onViewportSizeUpdated(vpW, vpH);
         }
+
     }
 
     /**
@@ -310,12 +311,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
             mCameraDevice = cameraDevice;
             mCameraIsOpen = true;
             startPreview();
-
-            //overkill?
-            if (mRecordableSurfaceView != null) {
-                configureTransform(mRecordableSurfaceView.getWidth(),
-                        mRecordableSurfaceView.getHeight());
-            }
 
         }
 
@@ -343,6 +338,8 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
         }
     };
 
+
+
     /**
      * chooseVideoSize makes a few assumptions for the sake of our use-case.
      *
@@ -353,7 +350,7 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
         int sw = mRecordableSurfaceView.getWidth(); //surface width
         int sh = mRecordableSurfaceView.getHeight(); //surface height
 
-        mPreviewSurfaceAspectRatio = (float) sw / sh;
+        mPreviewSurfaceAspectRatio = sw * 1.0f / sh;
 
         Log.i(TAG, "chooseVideoSize() for landscape:" + (mPreviewSurfaceAspectRatio > 1.f)
                 + " aspect: " + mPreviewSurfaceAspectRatio + " : " + Arrays.toString(choices));
@@ -403,9 +400,16 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
                     Log.i(TAG, "---no perfect match, check for 'normal'");
                 }
 
-                if (sizeToReturn == null) {
-                    Log.i(TAG, "---no 'normal' match, return largest ");
-                }
+//                //if that fails - check for largest 'normal size' video
+//                for (Size potential : potentials) {
+//                    if (potential.getHeight() == 1080 || potential.getHeight() == 720) {
+//                        sizeToReturn = potential;
+//                        break;
+//                    }
+//                }
+//                if (sizeToReturn == null) {
+//                    Log.i(TAG, "---no 'normal' match, return largest ");
+//                }
 
                 //if not, return largest potential available
                 if (sizeToReturn == null) {
@@ -454,7 +458,7 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
         }
         try {
 
-            mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             if (mSurfaces == null) {
                 mSurfaces = new ArrayList<>();
             }
@@ -473,6 +477,8 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
             Surface previewSurface = new Surface(mSurfaceTexture);
             mSurfaces.add(previewSurface);
             mPreviewBuilder.addTarget(previewSurface);
+            mSurfaceTexture.setDefaultBufferSize(mRecordableSurfaceView.getHeight(),
+                    mRecordableSurfaceView.getWidth());
 
             mCameraDevice.createCaptureSession(mSurfaces, new CameraCaptureSession.StateCallback() {
 
@@ -524,39 +530,41 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
     };
 
 
-    /**
-     * Configures the necessary Matrix transformation to `mRecordableSurfaceView`.
-     * This method should not to be called until the camera preview size is determined in
-     * openCamera, or until the size of `mRecordableSurfaceView` is fixed.
-     *
-     * @param viewWidth  The width of `mRecordableSurfaceView`
-     * @param viewHeight The height of `mRecordableSurfaceView`
-     */
-    public void configureTransform(int viewWidth, int viewHeight) {
-        Activity activity = getActivity();
-        if (null == mRecordableSurfaceView || null == mPreviewSize || null == activity) {
-            return;
+
+    private Size getOptimalPreviewSize(Size[] sizes, int w, int h) {
+        final double ASPECT_TOLERANCE = 0.1;
+        double targetRatio = (double) h / w;
+
+        if (sizes == null) {
+            return null;
         }
 
-        Matrix matrix = new Matrix();
-        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+        Size optimalSize = null;
+        double minDiff = Double.MAX_VALUE;
 
-        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
-            RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
-            float centerX = viewRect.centerX();
-            float centerY = viewRect.centerY();
+        int targetHeight = h;
 
-            RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
-            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
-            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
-            float scale = Math.max(
-                    (float) viewHeight / mPreviewSize.getHeight(),
-                    (float) viewWidth / mPreviewSize.getWidth());
-            matrix.postScale(scale, scale, centerX, centerY);
-            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
+        for (Size size : sizes) {
+            double ratio = (double) size.getWidth() / size.getHeight();
+            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) {
+                continue;
+            }
+            if (Math.abs(size.getHeight() - targetHeight) < minDiff) {
+                optimalSize = size;
+                minDiff = Math.abs(size.getHeight() - targetHeight);
+            }
         }
 
-        mVideoRenderer.setWindowTransform(matrix);
+        if (optimalSize == null) {
+            minDiff = Double.MAX_VALUE;
+            for (Size size : sizes) {
+                if (Math.abs(size.getHeight() - targetHeight) < minDiff) {
+                    optimalSize = size;
+                    minDiff = Math.abs(size.getHeight() - targetHeight);
+                }
+            }
+        }
+        return optimalSize;
     }
 
     /**
@@ -564,7 +572,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
      */
     public void setRecordableSurfaceView(RecordableSurfaceView rsv) {
         mRecordableSurfaceView = rsv;
-
     }
 
     /**
