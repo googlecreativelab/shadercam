@@ -19,7 +19,6 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.MediaRecorder;
-import android.opengl.Matrix;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -33,8 +32,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -339,7 +336,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
     };
 
 
-
     /**
      * chooseVideoSize makes a few assumptions for the sake of our use-case.
      *
@@ -528,7 +524,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
             super.onCaptureCompleted(session, request, result);
         }
     };
-
 
 
     private Size getOptimalPreviewSize(Size[] sizes, int w, int h) {

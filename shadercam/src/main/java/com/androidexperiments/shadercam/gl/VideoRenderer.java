@@ -16,6 +16,7 @@ import android.util.SparseIntArray;
 import android.view.Surface;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -47,7 +48,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
     /**
      * Current context for use with utility methods
      */
-    private Context mContext;
+    private WeakReference<Context> mContextWeakReference;
 
     protected int mSurfaceWidth, mSurfaceHeight;
 
@@ -199,7 +200,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
     }
 
     private void init(Context context, String fragPath, String vertPath) {
-        this.mContext = context;
+        this.mContextWeakReference = new WeakReference<>(context);
         this.mFragmentShaderPath = fragPath;
         this.mVertexShaderPath = vertPath;
         loadFromShadersFromAssets(mFragmentShaderPath, mVertexShaderPath);
@@ -209,8 +210,8 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
 
     private void loadFromShadersFromAssets(String pathToFragment, String pathToVertex) {
         try {
-            fragmentShaderCode = ShaderUtils.getStringFromFileInAssets(mContext, pathToFragment);
-            vertexShaderCode = ShaderUtils.getStringFromFileInAssets(mContext, pathToVertex);
+            fragmentShaderCode = ShaderUtils.getStringFromFileInAssets(mContextWeakReference.get(), pathToFragment);
+            vertexShaderCode = ShaderUtils.getStringFromFileInAssets(mContextWeakReference.get(), pathToVertex);
         } catch (IOException e) {
             Log.e(TAG, "loadFromShadersFromAssets() failed. Check paths to assets.\n" + e
                     .getMessage());
@@ -396,7 +397,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
             throw new IllegalStateException("Too many textures! Please don't use so many :(");
         }
 
-        Bitmap bmp = BitmapFactory.decodeResource(mContext.getResources(), resource_id);
+        Bitmap bmp = BitmapFactory.decodeResource(mContextWeakReference.get().getResources(), resource_id);
 
         return addTexture(texId, bmp, uniformName, true);
     }
