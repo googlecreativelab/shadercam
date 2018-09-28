@@ -193,8 +193,8 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
                 return;
             } else {
                 mRecordableSurfaceView.resume();
-                mPermissionsSatisfied
-                        = true; //extra helper as callback sometimes isnt quick enough for future results
+                mPermissionsSatisfied = true;
+                //extra helper as callback sometimes isnt quick enough for future results
                 mOutputFile = getVideoFile();
                 android.graphics.Point size = new android.graphics.Point();
                 getWindowManager().getDefaultDisplay().getRealSize(size);
