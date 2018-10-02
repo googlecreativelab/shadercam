@@ -31,7 +31,6 @@ import android.view.Surface;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -145,15 +144,15 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
     @Override
     public void onResume() {
         super.onResume();
-
         startBackgroundThread();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-
+        closeCamera();
         stopBackgroundThread();
+        mRecordableSurfaceView.setRendererCallbacks(null);
     }
 
     public void setVideoRenderer(VideoRenderer videoRenderer) {
@@ -162,8 +161,10 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
             return;
         }
         mVideoRenderer.setVideoFragment(VideoFragment.getInstance());
+        mVideoRenderer.setOnRendererReadyListener(this);
         mRecordableSurfaceView.setRendererCallbacks(mVideoRenderer);
-        mVideoRenderer.setOnRendererReadyListener(VideoFragment.getInstance());
+        mVideoRenderer.onSurfaceChanged(mRecordableSurfaceView.getWidth(),
+                mRecordableSurfaceView.getHeight());
     }
 
 
@@ -180,15 +181,11 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
      * Stops the background thread and its {@link Handler}.
      */
     private void stopBackgroundThread() {
-        if (mBackgroundThread != null) {
-            mBackgroundThread.quitSafely();
-            try {
-                mBackgroundThread.join();
-                mBackgroundThread = null;
-                mBackgroundHandler = null;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        Log.e(TAG, "RELEASE TEXTURE");
+        if (mSurfaceTexture != null) {
+            mSurfaceTexture.release();
+            mSurfaceTexture = null;
+            mSurfaces.clear();
         }
     }
 
@@ -299,6 +296,34 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
 
     }
 
+    private CameraCaptureSession.StateCallback mCaptureSessionStateCallback
+            = new CameraCaptureSession.StateCallback() {
+
+        @Override
+        public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+            mPreviewSession = cameraCaptureSession;
+            Log.e(TAG, "CaptureSession Configured: " + cameraCaptureSession);
+            updatePreview();
+        }
+
+        @Override
+        public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+            Activity activity = getActivity();
+            Log.e(TAG, "config failed: " + cameraCaptureSession);
+            if (null != activity) {
+                Toast.makeText(activity, "CaptureSession Config Failed", Toast.LENGTH_SHORT)
+                        .show();
+            }
+        }
+
+        @Override
+        public void onClosed(@NonNull CameraCaptureSession session) {
+            super.onClosed(session);
+            Log.e(TAG, "onClosed: " + session);
+
+        }
+    };
+
     /**
      * {@link CameraDevice.StateCallback} is called when {@link CameraDevice} changes its status.
      */
@@ -309,6 +334,7 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
             mCameraOpenCloseLock.release();
             mCameraDevice = cameraDevice;
             mCameraIsOpen = true;
+
             startPreview();
 
         }
@@ -319,6 +345,8 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
             cameraDevice.close();
             mCameraDevice = null;
             mCameraIsOpen = false;
+            Log.e(TAG, "DISCONNECTED FROM CAMERA");
+
         }
 
         @Override
@@ -339,107 +367,21 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
 
 
     /**
-     * chooseVideoSize makes a few assumptions for the sake of our use-case.
-     *
-     * @param choices The list of available sizes
-     * @return The video size
-     */
-    private Size chooseVideoSize(Size[] choices) {
-        int sw = mRecordableSurfaceView.getWidth(); //surface width
-        int sh = mRecordableSurfaceView.getHeight(); //surface height
-
-        mPreviewSurfaceAspectRatio = sw * 1.0f / sh;
-
-        Log.i(TAG, "chooseVideoSize() for landscape:" + (mPreviewSurfaceAspectRatio > 1.f)
-                + " aspect: " + mPreviewSurfaceAspectRatio + " : " + Arrays.toString(choices));
-
-        //rather than in-lining returns, use this size as placeholder so we can calc aspectratio upon completion
-        Size sizeToReturn = null;
-
-        //video is 'landscape' if over 1.f
-        if (mPreviewSurfaceAspectRatio > 1.f) {
-            for (Size size : choices) {
-                if (size.getHeight() == size.getWidth() * 9 / 16 && size.getHeight() <= 1080) {
-                    sizeToReturn = size;
-                }
-            }
-
-            //final check
-            if (sizeToReturn == null) {
-                sizeToReturn = choices[0];
-            }
-
-            mVideoSizeAspectRatio = (float) sizeToReturn.getWidth() / sizeToReturn.getHeight();
-        } else //portrait or square
-        {
-            /**
-             * find a potential aspect ratio match so that our video on screen is the same
-             * as what we record out - what u see is what u get
-             */
-            ArrayList<Size> potentials = new ArrayList<>();
-            for (Size size : choices) {
-                // height / width because we're portrait
-                float aspect = (float) size.getHeight() / size.getWidth();
-                if (aspect == mPreviewSurfaceAspectRatio) {
-                    potentials.add(size);
-                }
-            }
-            Log.i(TAG, "---potentials: " + potentials.size());
-
-            if (potentials.size() > 0) {
-                //check for potential perfect matches (usually full screen surfaces)
-                for (Size potential : potentials) {
-                    if (potential.getHeight() == sw) {
-                        sizeToReturn = potential;
-                        break;
-                    }
-                }
-                if (sizeToReturn == null) {
-                    Log.i(TAG, "---no perfect match, check for 'normal'");
-                }
-
-//                //if that fails - check for largest 'normal size' video
-//                for (Size potential : potentials) {
-//                    if (potential.getHeight() == 1080 || potential.getHeight() == 720) {
-//                        sizeToReturn = potential;
-//                        break;
-//                    }
-//                }
-//                if (sizeToReturn == null) {
-//                    Log.i(TAG, "---no 'normal' match, return largest ");
-//                }
-
-                //if not, return largest potential available
-                if (sizeToReturn == null) {
-                    sizeToReturn = potentials.get(0);
-                }
-            }
-
-            //final check
-            if (sizeToReturn == null) {
-                sizeToReturn = choices[0];
-            }
-
-            //landscape shit
-            mVideoSizeAspectRatio = (float) sizeToReturn.getHeight() / sizeToReturn.getWidth();
-        }
-
-        return sizeToReturn;
-    }
-
-    /**
      * close camera when not in use/pausing/leaving
      */
     public void closeCamera() {
         try {
             mCameraOpenCloseLock.acquire();
             if (null != mCameraDevice) {
+                mPreviewSession.stopRepeating();
                 mCameraDevice.close();
                 mCameraDevice = null;
                 mCameraIsOpen = false;
             }
         } catch (InterruptedException e) {
             throw new RuntimeException("Interrupted while trying to lock camera closing.");
+        } catch (CameraAccessException acex) {
+            Log.e(TAG, "Failed to stop repeaing preview request", acex);
         } finally {
             mCameraOpenCloseLock.release();
         }
@@ -451,6 +393,7 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
      * Start the camera preview.
      */
     private void startPreview() {
+
         if (null == mCameraDevice || null == mPreviewSize) {
             return;
         }
@@ -461,6 +404,9 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
                 mSurfaces = new ArrayList<>();
             }
 
+            if (mPreviewTexture == -1) {
+                mPreviewTexture = mVideoRenderer.getCameraTexture();
+            }
             assert mPreviewTexture != -1;
 
             mSurfaceTexture = new SurfaceTexture(mPreviewTexture);
@@ -478,24 +424,8 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
             mSurfaceTexture.setDefaultBufferSize(mRecordableSurfaceView.getHeight(),
                     mRecordableSurfaceView.getWidth());
 
-            mCameraDevice.createCaptureSession(mSurfaces, new CameraCaptureSession.StateCallback() {
-
-                @Override
-                public void onConfigured(CameraCaptureSession cameraCaptureSession) {
-                    mPreviewSession = cameraCaptureSession;
-                    updatePreview();
-                }
-
-                @Override
-                public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
-                    Activity activity = getActivity();
-                    Log.e(TAG, "config failed: " + cameraCaptureSession);
-                    if (null != activity) {
-                        Toast.makeText(activity, "CaptureSession Config Failed", Toast.LENGTH_SHORT)
-                                .show();
-                    }
-                }
-            }, mBackgroundHandler);
+            mCameraDevice.createCaptureSession(mSurfaces, mCaptureSessionStateCallback,
+                    mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -510,15 +440,16 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
         }
         try {
             mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-            mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), captureCallback,
+            mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), mCaptureCallback,
                     mBackgroundHandler);
+
             mSurfaceTexture.setOnFrameAvailableListener(mVideoRenderer);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
 
-    private CameraCaptureSession.CaptureCallback captureCallback
+    private CameraCaptureSession.CaptureCallback mCaptureCallback
             = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
@@ -621,7 +552,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
 
     @Override
     public void onRendererReady() {
-        setPreviewTexture(mVideoRenderer.getCameraTexture());
 
         getActivity().runOnUiThread(new Runnable() {
             @Override

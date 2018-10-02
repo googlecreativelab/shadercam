@@ -210,8 +210,10 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
 
     private void loadFromShadersFromAssets(String pathToFragment, String pathToVertex) {
         try {
-            fragmentShaderCode = ShaderUtils.getStringFromFileInAssets(mContextWeakReference.get(), pathToFragment);
-            vertexShaderCode = ShaderUtils.getStringFromFileInAssets(mContextWeakReference.get(), pathToVertex);
+            fragmentShaderCode = ShaderUtils
+                    .getStringFromFileInAssets(mContextWeakReference.get(), pathToFragment);
+            vertexShaderCode = ShaderUtils
+                    .getStringFromFileInAssets(mContextWeakReference.get(), pathToVertex);
         } catch (IOException e) {
             Log.e(TAG, "loadFromShadersFromAssets() failed. Check paths to assets.\n" + e
                     .getMessage());
@@ -221,7 +223,6 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
 
     protected void initGLComponents() {
         onPreSetupGLComponents();
-
         setupVertexBuffer();
         setupTextures();
         setupCameraTexture();
@@ -289,6 +290,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
      * but rather as {@link GLES11Ext#GL_TEXTURE_EXTERNAL_OES}, which we bind here
      */
     protected void setupCameraTexture() {
+        Log.e(TAG, "SETUP CAMERA TEXTURE " + mTexturesIds[0]);
         //set texture[0] to camera texture
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mTexturesIds[0]);
@@ -397,7 +399,8 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
             throw new IllegalStateException("Too many textures! Please don't use so many :(");
         }
 
-        Bitmap bmp = BitmapFactory.decodeResource(mContextWeakReference.get().getResources(), resource_id);
+        Bitmap bmp = BitmapFactory
+                .decodeResource(mContextWeakReference.get().getResources(), resource_id);
 
         return addTexture(texId, bmp, uniformName, true);
     }
@@ -492,11 +495,6 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
     }
 
 
-    public float[] getCameraTransformMatrix() {
-        return mCameraTransformMatrix;
-    }
-
-
     public void setOnRendererReadyListener(OnRendererReadyListener listener) {
         mOnRendererReadyListener = listener;
 
@@ -504,11 +502,14 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
 
     public void setVideoFragment(VideoFragment videoFragment) {
         mVideoFragment = videoFragment;
+        mVideoFragment.setPreviewTexture(getCameraTexture());
     }
 
     @Override
     public void onSurfaceCreated() {
+        deinitGL();
         mTextureArray = new ArrayList<>();
+        initGLComponents();
     }
 
     @Override
@@ -517,8 +518,6 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
         mSurfaceWidth = width;
         mViewportHeight = height;
         mViewportWidth = width;
-        initGLComponents();
-
     }
 
     @Override
@@ -528,6 +527,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
 
     @Override
     public void onContextCreated() {
+
     }
 
     private boolean mFrameAvailableRegistered = false;
@@ -542,12 +542,15 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
         } else {
             if (mVideoFragment.getSurfaceTexture() != null) {
                 mSurfaceTexture = mVideoFragment.getSurfaceTexture();
+            } else {
+                mVideoFragment.setPreviewTexture(getCameraTexture());
             }
         }
     }
 
     @Override
     public void onDrawFrame() {
+
         if (mNeedsRefreshCount > 0) {
             for (int i = 0; i < mNeedsRefreshCount; i++) {
                 mSurfaceTexture.updateTexImage();
@@ -558,14 +561,13 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
 
         GLES20.glViewport(0, 0, mViewportWidth, mViewportHeight);
 
-        GLES20.glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
+        GLES20.glClearColor(0.329412f, 0.329412f, 0.329412f, 0.0f);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
         //set shader
         GLES20.glUseProgram(mCameraShaderProgram);
 
         setUniformsAndAttribs();
-
         setExtraTextures();
         drawElements();
         onDrawCleanup();
@@ -574,9 +576,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
     public void setSurfaceTexture(SurfaceTexture surfaceTexture) {
         mSurfaceTexture = surfaceTexture;
         mSurfaceTexture.setOnFrameAvailableListener(this);
-
     }
-
 
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture) {

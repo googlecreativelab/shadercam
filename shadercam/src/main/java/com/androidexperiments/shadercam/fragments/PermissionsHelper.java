@@ -1,7 +1,6 @@
 package com.androidexperiments.shadercam.fragments;
 
 import android.content.pm.PackageManager;
-import android.content.pm.PermissionInfo;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;

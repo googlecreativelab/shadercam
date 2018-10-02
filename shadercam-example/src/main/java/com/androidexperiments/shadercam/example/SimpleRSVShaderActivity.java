@@ -1,7 +1,6 @@
 package com.androidexperiments.shadercam.example;
 
 import com.androidexperiments.shadercam.example.gl.ExampleVideoRenderer;
-import com.androidexperiments.shadercam.fragments.CameraFragment;
 import com.androidexperiments.shadercam.fragments.PermissionsHelper;
 import com.androidexperiments.shadercam.fragments.VideoFragment;
 import com.androidexperiments.shadercam.gl.CameraRenderer;
@@ -11,8 +10,6 @@ import com.uncorkedstudios.android.view.recordablesurfaceview.RecordableSurfaceV
 
 import android.Manifest;
 import android.graphics.SurfaceTexture;
-import android.opengl.GLES20;
-import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.FragmentActivity;
@@ -36,7 +33,8 @@ import butterknife.OnClick;
  *
  * Very basic implemention of shader camera.
  */
-public class SimpleRSVShaderActivity extends FragmentActivity implements PermissionsHelper.PermissionsListener {
+public class SimpleRSVShaderActivity extends FragmentActivity
+        implements PermissionsHelper.PermissionsListener {
 
     private static final String TAG = SimpleRSVShaderActivity.class.getSimpleName();
 
@@ -70,7 +68,6 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
     /**
      * boolean for triggering restart of camera after completed rendering
      */
-    private boolean mRestartCamera = false;
 
     private PermissionsHelper mPermissionsHelper;
 
@@ -86,9 +83,6 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
         setContentView(R.layout.activity_rsv);
 
         ButterKnife.bind(this);
-        setupVideoFragment();
-        setupInteraction();
-        mVideoRenderer = new VideoRenderer(this);
 
         //setup permissions for M or start normally
         if (PermissionsHelper.isMorHigher()) {
@@ -101,22 +95,19 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
     /**
      * create the camera fragment responsible for handling camera state and add it to our activity
      */
-    private void setupVideoFragment() {
-        if (mVideoFragment != null && mVideoFragment.isAdded()) {
-            return;
-        }
+    private void setupVideoFragment(VideoRenderer renderer) {
 
         mVideoFragment = VideoFragment.getInstance();
-        mVideoFragment.setCameraToUse(
-                VideoFragment.CAMERA_PRIMARY); //pick which camera u want to use, we default to forward
+        mVideoFragment.setRecordableSurfaceView(mRecordableSurfaceView);
+        mVideoFragment.setVideoRenderer(renderer);
+        mVideoFragment.setCameraToUse(VideoFragment.CAMERA_PRIMARY);
 
-        //add fragment to our setup and let it work its magic
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.add(mVideoFragment, TAG_CAMERA_FRAGMENT);
         transaction.commit();
-        mVideoFragment.setRecordableSurfaceView(mRecordableSurfaceView);
 
     }
+
 
     private void setupPermissions() {
         mPermissionsHelper = PermissionsHelper.attach(this);
@@ -177,6 +168,7 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
         super.onResume();
 
         Log.d(TAG, "onResume()");
+        setupInteraction();
 
         ShaderUtils.goFullscreen(this.getWindow());
 
@@ -188,13 +180,14 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
          * being called prematurely
          */
 
-        if (PermissionsHelper.isMorHigher() && !mPermissionsSatisfied) {
+        if (PermissionsHelper.isMorHigher()) {
             if (!mPermissionsHelper.checkPermissions()) {
                 return;
             } else {
+                mVideoRenderer = new VideoRenderer(this);
+                setupVideoFragment(mVideoRenderer);
                 mRecordableSurfaceView.resume();
-                mPermissionsSatisfied = true;
-                //extra helper as callback sometimes isnt quick enough for future results
+
                 mOutputFile = getVideoFile();
                 android.graphics.Point size = new android.graphics.Point();
                 getWindowManager().getDefaultDisplay().getRealSize(size);
@@ -203,17 +196,14 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
                 } catch (IOException ioex) {
                     Log.e(TAG, "Couldn't re-init recording", ioex);
                 }
-                mVideoFragment.setVideoRenderer(mVideoRenderer);
             }
         }
-
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-
-        shutdownCamera(false);
+        shutdownCamera();
         mRecordableSurfaceView.pause();
     }
 
@@ -264,24 +254,18 @@ public class SimpleRSVShaderActivity extends FragmentActivity implements Permiss
     }
 
     private File getVideoFile() {
-        return new File(Environment.getExternalStorageDirectory(), System.currentTimeMillis() + "_" + TEST_VIDEO_FILE_NAME);
+        return new File(Environment.getExternalStorageDirectory(),
+                System.currentTimeMillis() + "_" + TEST_VIDEO_FILE_NAME);
     }
 
     /**
      * kills the camera in camera fragment and shutsdown render thread
-     *
-     * @param restart whether or not to restart the camera after shutdown is complete
      */
-    private void shutdownCamera(boolean restart) {
-        //make sure we're here in a working state with proper permissions when we kill the camera
-        if (PermissionsHelper.isMorHigher() && !mPermissionsSatisfied) {
-            return;
-        }
-
-
-        mVideoFragment.closeCamera();
-
-        mRestartCamera = restart;
+    private void shutdownCamera() {
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        ft.remove(mVideoFragment);
+        ft.commit();
+        mVideoFragment = null;
     }
 
 }
