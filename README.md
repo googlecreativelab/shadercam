@@ -48,10 +48,20 @@ implementation 'com.github.uncorkedstudios:shadercam:2.0.1'
 
 Integration Example
 -----
-_**Changed from v1.0:** shadercam now expects that a Renderer be created before  connecting to the Camera preview service as this is more in line with OpenGL renderer lifecycle patterns   _
+_**Changed from v1.0:** shadercam now expects that a VideoRenderer be created and attached before  connecting to the Camera preview service. This is more in line with OpenGL renderer lifecycle patterns_
 
 **shadercam** comes with a simple implementation of the camera2 apis called `VideoFragment`, which only
 requires that you add a `RecordableSurfaceView` to your layout.
+
+```
+    <com.uncorkedstudios.android.view.recordablesurfaceview.RecordableSurfaceView
+        android:id="@+id/texture"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentTop="true" />
+```
+
+Then it is a fairly simple matter of configuring and attaching the Camera management fragment:
 
 ```
 private void setupCameraFragment(VideoRenderer renderer) {
@@ -70,11 +80,11 @@ private void setupCameraFragment(VideoRenderer renderer) {
         transaction.commit();
     }
 ```
+Once the VideoFragment has been provided a renderer (a default one is provided in the case where you do not provide a custom one), and a RecordableSurfaceView to render onto, it can then be added to the activity and brought to life for viewing the camera feed. 
 
-**Changed from v1.0:** Instead of waiting to build a renderer, we expect that to happen before connecting to the Camera preview service, so 
+In order to record to a video file, there are a few more steps to take.
 
-
-In onResume, make sure that `RecordableSurfaceView` has a handle to a file that it has permissions to write a movie file to: 
+For example, in this implementation of  onResume, we make sure that `RecordableSurfaceView` has a handle to a file that it has permissions to write a movie file to: 
 
 ```
 public void onResume() {
@@ -86,10 +96,11 @@ public void onResume() {
 }
 ```
 
-> Note that phones with Notches may behave differently based on the underlying system's implementation
+> Note that phones with Notches may behave differently based on the underlying system's implementation, for example, the outputs of [getRealSize](https://developer.android.com/reference/android/view/Display#getRealSize(android.graphics.Point)) vs. [getSize](https://developer.android.com/reference/android/view/Display#getSize(android.graphics.Point)) in the [Display](https://developer.android.com/reference/android/view/Display) class will return different shapes that either include or exclude the notch. 
 
 
-
+Lifecycle
+----
 The new `VideoRenderer` class implements `RecordableSurfaceView.RendererCallbacks` so your top-level renderer can recieve lifecycle callbacks like onSurfaceChanged and onDrawFrame - closer to the native [GLSurfaceView.Renderer](https://developer.android.com/reference/android/opengl/GLSurfaceView.Renderer) pattern.
 
 > `public void onSurfaceCreated()`
@@ -99,7 +110,9 @@ The new `VideoRenderer` class implements `RecordableSurfaceView.RendererCallback
 
 etc. 
 
-Check out `MeetupActivityV2`, `SimpleRSVShaderActivity` and `ExampleVideoRenderer` in `shadercam-example` for more in depth examples.
+Examples:
+----
+Check out `MeetupActivityV2`, `SimpleRSVShaderActivity` and `ExampleVideoRenderer` in `shadercam-example` for some straightforward example code.
 
 more info
 ---------
