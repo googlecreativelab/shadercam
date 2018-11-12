@@ -43,7 +43,7 @@ repositories {
 And then in your app gradle, add the dependency for shadercam:
 
 ```
-implementation 'com.github.uncorkedstudios:shadercam:2.0.1'
+implementation 'com.github.googlecreativelab:shadercam:2.0.1'
 ```
 
 Integration Example
