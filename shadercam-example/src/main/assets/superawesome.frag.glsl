@@ -1,7 +1,7 @@
 #extension GL_OES_EGL_image_external : require
 
 //necessary
-precision mediump float;
+precision highp float;
 uniform samplerExternalOES camTexture;
 
 varying vec2 v_CamTexCoordinate;

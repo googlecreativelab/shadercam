@@ -22,8 +22,8 @@ import com.androidexperiments.shadercam.utils.ShaderUtils;
 import java.io.File;
 import java.util.Arrays;
 
+import butterknife.Bind;
 import butterknife.ButterKnife;
-import butterknife.InjectView;
 import butterknife.OnClick;
 
 /**
@@ -44,8 +44,8 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
     /**
      * We inject our views from our layout xml here using {@link ButterKnife}
      */
-    @InjectView(R.id.texture_view) TextureView mTextureView;
-    @InjectView(R.id.btn_record) Button mRecordBtn;
+    @Bind(R.id.texture_view) TextureView mTextureView;
+    @Bind(R.id.btn_record) Button mRecordBtn;
 
     /**
      * Custom fragment used for encapsulating all the {@link android.hardware.camera2} apis.
@@ -72,7 +72,7 @@ public class SimpleShaderActivity extends FragmentActivity implements CameraRend
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ButterKnife.inject(this);
+        ButterKnife.bind(this);
 
         setupCameraFragment();
         setupInteraction();
