@@ -184,7 +184,9 @@ public class SimpleRSVShaderActivity extends FragmentActivity
             if (!mPermissionsHelper.checkPermissions()) {
                 return;
             } else {
-                mVideoRenderer = new VideoRenderer(this);
+                if (mVideoRenderer == null) {
+                    mVideoRenderer = new VideoRenderer(this);
+                }
                 setupVideoFragment(mVideoRenderer);
                 mRecordableSurfaceView.resume();
 

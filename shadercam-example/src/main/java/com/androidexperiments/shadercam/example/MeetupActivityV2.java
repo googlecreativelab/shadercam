@@ -21,8 +21,8 @@ public class MeetupActivityV2 extends SimpleRSVShaderActivity implements SeekBar
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 //        mVideoRenderer = new VideoRenderer(this);
-//        mVideoRenderer = new TestRenderer(this);
-        mVideoRenderer = new ExampleVideoRenderer(this);
+        mVideoRenderer = new TestRenderer(this);
+//        mVideoRenderer = new ExampleVideoRenderer(this);
         mSeekbar = (SeekBar) findViewById(R.id.seek_bar);
         mSeekbar.setOnSeekBarChangeListener(this);
     }
