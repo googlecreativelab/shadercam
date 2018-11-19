@@ -11,6 +11,7 @@ import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
+import android.opengl.Matrix;
 import android.util.Log;
 import android.util.SparseIntArray;
 import android.view.Surface;
@@ -144,7 +145,9 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
      * {@code updateTexImage()} is called in our main {@link #onDrawFrame()} loop.
      */
     private float[] mCameraTransformMatrix = new float[16];
+    private float[] mOrthoMatrix = new float[16];
 
+    private float mAspectRatio = 1.0f;
 
     /**
      * Interface listener for some callbacks to the UI thread when rendering is setup and finished.
@@ -204,9 +207,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
         this.mFragmentShaderPath = fragPath;
         this.mVertexShaderPath = vertPath;
         loadFromShadersFromAssets(mFragmentShaderPath, mVertexShaderPath);
-
     }
-
 
     private void loadFromShadersFromAssets(String pathToFragment, String pathToVertex) {
         try {
@@ -256,6 +257,11 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
 
     }
 
+    public void setAspectRatio(float aspect) {
+        mAspectRatio = aspect;
+    }
+
+
     protected void setupVertexBuffer() {
         // Draw list buffer
         ByteBuffer dlb = ByteBuffer.allocateDirect(drawOrder.length * 2);
@@ -290,7 +296,6 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
      * but rather as {@link GLES11Ext#GL_TEXTURE_EXTERNAL_OES}, which we bind here
      */
     protected void setupCameraTexture() {
-        Log.e(TAG, "SETUP CAMERA TEXTURE " + mTexturesIds[0]);
         //set texture[0] to camera texture
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mTexturesIds[0]);
@@ -369,6 +374,9 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
 
         int textureTranformHandle = GLES20
                 .glGetUniformLocation(mCameraShaderProgram, "camTextureTransform");
+        int positionMatrixHandle = GLES20
+                .glGetUniformLocation(mCameraShaderProgram, "uPMatrix");
+
         textureCoordinateHandle = GLES20
                 .glGetAttribLocation(mCameraShaderProgram, "camTexCoordinate");
         positionHandle = GLES20.glGetAttribLocation(mCameraShaderProgram, "position");
@@ -387,6 +395,7 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
                 textureBuffer);
 
         GLES20.glUniformMatrix4fv(textureTranformHandle, 1, false, mCameraTransformMatrix, 0);
+        GLES20.glUniformMatrix4fv(positionMatrixHandle, 1, false, mOrthoMatrix, 0);
     }
 
     /**
@@ -518,6 +527,8 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
         mSurfaceWidth = width;
         mViewportHeight = height;
         mViewportWidth = width;
+
+        mAspectRatio = 1.0f * mViewportWidth / mViewportHeight;
     }
 
     @Override
@@ -551,10 +562,13 @@ public class VideoRenderer implements RecordableSurfaceView.RendererCallbacks,
     @Override
     public void onDrawFrame() {
 
+        Matrix.orthoM(mOrthoMatrix, 0, -mAspectRatio, mAspectRatio,  -1,  1 ,-1, 1);
+
         if (mNeedsRefreshCount > 0) {
             for (int i = 0; i < mNeedsRefreshCount; i++) {
                 mSurfaceTexture.updateTexImage();
                 mSurfaceTexture.getTransformMatrix(mCameraTransformMatrix);
+                mNeedsRefreshCount--;
             }
 
         }

@@ -18,7 +18,6 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -31,6 +30,9 @@ import android.view.Surface;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -71,10 +73,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
      */
     private Size mPreviewSize;
 
-    /**
-     * The {@link Size} of video preview/recording.
-     */
-    private Size mVideoSize;
 
     /**
      * Camera preview.
@@ -110,15 +108,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
      */
     protected int mCameraToUse = CAMERA_PRIMARY;
 
-
-    /**
-     * Listener for when openCamera is called and a proper video size is created
-     */
-    private VideoFragment.OnViewportSizeUpdatedListener mOnViewportSizeUpdatedListener;
-
-    private float mVideoSizeAspectRatio;
-
-    private float mPreviewSurfaceAspectRatio;
 
     /**
      * A {@link Semaphore} to prevent the app from exiting before closing the camera.
@@ -235,19 +224,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
 
             String cameraId = cameraList[mCameraToUse];
 
-            CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
-            StreamConfigurationMap streamConfigurationMap = characteristics
-                    .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-
-            mVideoSize = getOptimalPreviewSize(
-                    streamConfigurationMap.getOutputSizes(MediaRecorder.class),
-                    mRecordableSurfaceView.getWidth(), mRecordableSurfaceView.getHeight());
-            mPreviewSize = getOptimalPreviewSize(
-                    streamConfigurationMap.getOutputSizes(SurfaceTexture.class),
-                    mRecordableSurfaceView.getWidth(), mRecordableSurfaceView.getHeight());
-
-            //send back for updates to renderer if needed
-            updateViewportSize(mVideoSizeAspectRatio, mPreviewSurfaceAspectRatio);
 
             manager.openCamera(cameraId, mStateCallback, null);
         } catch (CameraAccessException e) {
@@ -262,39 +238,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
         }
     }
 
-    /**
-     * Callback from our {@link com.androidexperiments.shadercam.fragments.CameraFragment.OnViewportSizeUpdatedListener CameraFragment.OnViewportSizeUpdatedListener}
-     * which is called every time we open the camera, to make sure we are using the most up-to-date values for calculating our
-     * renderer's glViewport. Without this, TextureView's that aren't exactly the same size as the size of Camera api video
-     * will become distorted.
-     *
-     * @param videoAspect   float of the aspect ratio of the size of video returned in openCamera
-     * @param surfaceAspect aspect ratio of our available textureview surface
-     */
-    public void updateViewportSize(float videoAspect, float surfaceAspect) {
-        int sw = mRecordableSurfaceView.getWidth();
-        int sh = mRecordableSurfaceView.getHeight();
-
-        int vpW, vpH;
-
-        if (videoAspect == surfaceAspect) {
-            vpW = sw;
-            vpH = sh;
-        } else if (videoAspect < surfaceAspect) {
-            float ratio = (float) sw / mVideoSize.getHeight();
-            vpW = (int) (mVideoSize.getHeight() * ratio);
-            vpH = (int) (mVideoSize.getWidth() * ratio);
-        } else {
-            float ratio = (float) sw / mVideoSize.getWidth();
-            vpW = (int) (mVideoSize.getWidth() * ratio);
-            vpH = (int) (mVideoSize.getHeight() * ratio);
-        }
-
-        if (mOnViewportSizeUpdatedListener != null) {
-            mOnViewportSizeUpdatedListener.onViewportSizeUpdated(vpW, vpH);
-        }
-
-    }
 
     private CameraCaptureSession.StateCallback mCaptureSessionStateCallback
             = new CameraCaptureSession.StateCallback() {
@@ -393,8 +336,8 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
      * Start the camera preview.
      */
     private void startPreview() {
-
-        if (null == mCameraDevice || null == mPreviewSize) {
+//|| null == mPreviewSize
+        if (null == mCameraDevice ) {
             return;
         }
         try {
@@ -418,11 +361,33 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
                 mSurfaces.clear();
             }
 
+            final Activity activity = getActivity();
+
+            final CameraManager manager = (CameraManager) activity
+                    .getSystemService(Context.CAMERA_SERVICE);
+
+            String[] cameraList = manager.getCameraIdList();
+
+            String cameraId = cameraList[mCameraToUse];
+
+            CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+            StreamConfigurationMap streamConfigurationMap = characteristics
+                    .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+            Size  preViewSize = getOptimalPreviewSize(
+                    streamConfigurationMap.getOutputSizes(SurfaceTexture.class),
+                    mRecordableSurfaceView.getWidth(), mRecordableSurfaceView.getHeight());
+            mSurfaceTexture.setDefaultBufferSize(preViewSize.getWidth(), preViewSize.getHeight());
+
+            float screenAspect = mRecordableSurfaceView.getWidth() * 1.0f/ mRecordableSurfaceView.getHeight();
+            float previewAspect = preViewSize.getHeight() * 1.0f/ preViewSize.getWidth();
+
+            float screenToTextureAspectRatio = screenAspect / previewAspect;
+            mVideoRenderer.setAspectRatio(screenToTextureAspectRatio);
+
             Surface previewSurface = new Surface(mSurfaceTexture);
             mSurfaces.add(previewSurface);
             mPreviewBuilder.addTarget(previewSurface);
-            mSurfaceTexture.setDefaultBufferSize(mRecordableSurfaceView.getHeight(),
-                    mRecordableSurfaceView.getWidth());
 
             mCameraDevice.createCaptureSession(mSurfaces, mCaptureSessionStateCallback,
                     mBackgroundHandler);
@@ -458,40 +423,51 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
         }
     };
 
+    static class CompareSizesByArea implements Comparator<Size> {
 
-    private Size getOptimalPreviewSize(Size[] sizes, int w, int h) {
-        final double ASPECT_TOLERANCE = 0.1;
-        double targetRatio = (double) h / w;
-
-        if (sizes == null) {
-            return null;
+        @Override
+        public int compare(Size lhs, Size rhs) {
+            // We cast here to ensure the multiplications won't overflow
+            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
+                    (long) rhs.getWidth() * rhs.getHeight());
         }
+
+    }
+
+    private Size getOptimalPreviewSize(Size[] sizes, int h, int w) {
+        final double ASPECT_TOLERANCE = 0.001;
+        double targetRatio = (double) w / h;
+        List<Size> allSizes = Arrays.asList(sizes);
+
+        Collections.sort(allSizes, new CompareSizesByArea());
 
         Size optimalSize = null;
         double minDiff = Double.MAX_VALUE;
 
         int targetHeight = h;
 
-        for (Size size : sizes) {
+        for (Size size : allSizes) {
             double ratio = (double) size.getWidth() / size.getHeight();
+
             if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) {
                 continue;
             }
-            if (Math.abs(size.getHeight() - targetHeight) < minDiff) {
+            if (Math.abs(size.getWidth() - targetHeight) < minDiff) {
                 optimalSize = size;
-                minDiff = Math.abs(size.getHeight() - targetHeight);
+                minDiff = Math.abs(size.getWidth() - targetHeight);
             }
         }
 
         if (optimalSize == null) {
             minDiff = Double.MAX_VALUE;
-            for (Size size : sizes) {
-                if (Math.abs(size.getHeight() - targetHeight) < minDiff) {
+            for (Size size : allSizes) {
+                if (Math.abs(size.getWidth() - targetHeight) < minDiff) {
                     optimalSize = size;
-                    minDiff = Math.abs(size.getHeight() - targetHeight);
+                    minDiff = Math.abs(size.getWidth() - targetHeight);
                 }
             }
         }
+
         return optimalSize;
     }
 
@@ -500,15 +476,6 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
      */
     public void setRecordableSurfaceView(RecordableSurfaceView rsv) {
         mRecordableSurfaceView = rsv;
-    }
-
-    /**
-     * Get the current video size used for recording
-     *
-     * @return {@link Size} of current video from camera.
-     */
-    public Size getVideoSize() {
-        return mVideoSize;
     }
 
     /**
@@ -523,24 +490,22 @@ public class VideoFragment extends Fragment implements VideoRenderer.OnRendererR
     /**
      * Set which camera to use, defaults to {@link #CAMERA_PRIMARY}.
      *
-     * @param camera_id can also be {@link #CAMERA_FORWARD} for forward facing, but use primary if that fails.
+     * @param camera_id can also be {@link #CAMERA_FORWARD} for forward facing, but use primary if
+     *                  that fails.
      */
     public void setCameraToUse(int camera_id) {
         mCameraToUse = camera_id;
     }
 
     /**
-     * Set the texture that we'll be drawing our camera preview to. This is created from our TextureView
+     * Set the texture that we'll be drawing our camera preview to. This is created from our
+     * TextureView
      * in our Renderer to be used with our shaders.
      */
     public void setPreviewTexture(int previewSurface) {
         this.mPreviewTexture = previewSurface;
     }
 
-    public void setOnViewportSizeUpdatedListener(
-            VideoFragment.OnViewportSizeUpdatedListener listener) {
-        this.mOnViewportSizeUpdatedListener = listener;
-    }
 
     public SurfaceTexture getSurfaceTexture() {
         return mSurfaceTexture;
